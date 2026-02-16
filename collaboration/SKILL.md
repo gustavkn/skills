@@ -50,3 +50,13 @@ Once a PR has been merged:
 ## Issues
 
 Always create GitHub issues on the original repository, never on the fork. The fork is only for development work.
+
+## Accessing Attached Files from GitHub
+
+When files are attached to GitHub issues or PRs, use the GitHub API with authentication to retrieve them:
+
+1. Files attached to issues/PRs are hosted on GitHub and may require authentication
+2. Use the `gh api` command with appropriate authentication to download files
+3. Example: `gh api <file-url> > filename` to retrieve and save attached files
+
+This approach ensures you can access and view files that are attached to issues or PRs, even when direct download links require authentication.

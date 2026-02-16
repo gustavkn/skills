@@ -1,0 +1,1 @@
+/home/claude/skills/sql/SKILL.md
