@@ -146,11 +146,15 @@ in <column>" costs nothing.
 
 ## Where gh api is not allowed
 
-`project_status.py` uses `gh api graphql`. Where the repo forbids `gh api`
-(e.g. a CLAUDE.md rule for GitHub Actions runs), skip the board moves, still
-tick checkboxes and post the comments (`issue_tasks.py` and `gh issue comment`
-don't use `gh api`), and start the comment with the column it belongs in, e.g.
-`**Status: Test**`.
+`project_status.py` uses `gh api graphql` internally. Where the repo forbids
+typing `gh api` (e.g. a CLAUDE.md rule for GitHub Actions runs) but allows the
+script, use the script: that is the sanctioned route to the board. If
+`PROJECTS_GH_TOKEN` is set, the script uses it for the board calls.
+
+If the script is not allowed, or fails for lack of access, skip the board
+moves, still tick checkboxes and post the comments (`issue_tasks.py` and
+`gh issue comment` don't use `gh api`), and start the comment with the column
+it belongs in, e.g. `**Status: Test**`.
 
 ## Reference
 

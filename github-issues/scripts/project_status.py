@@ -21,11 +21,16 @@ Options:
     --field NAME        Single-select field to set (default: Status)
 
 Requires the `project` OAuth scope: gh auth refresh -s project
+
+If PROJECTS_GH_TOKEN is set, the board calls use that token instead of gh's own
+login. CI uses this to give board access through this script only, e.g. a
+fine-grained token with org Projects read/write.
 """
 
 import argparse
 import difflib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -33,7 +38,8 @@ import sys
 SCOPE_HINT = (
     "The gh token is missing the Projects scope.\n"
     "Ask the user to run:  gh auth refresh -s project\n"
-    "(read:project alone can read boards but cannot move cards.)"
+    "(read:project alone can read boards but cannot move cards.)\n"
+    "In CI, set PROJECTS_GH_TOKEN to a token with Projects read/write."
 )
 
 
@@ -49,7 +55,10 @@ def gh_graphql(query: str, **variables):
         flag = "-F" if isinstance(value, int) else "-f"
         cmd += [flag, f"{key}={value}"]
 
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    env = None
+    if os.environ.get("PROJECTS_GH_TOKEN"):
+        env = {**os.environ, "GH_TOKEN": os.environ["PROJECTS_GH_TOKEN"]}
+    proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
     combined = proc.stdout + proc.stderr
 
     if "read:project" in combined or "'project'" in combined:
