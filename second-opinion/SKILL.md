@@ -20,7 +20,7 @@ Set up a working directory, write the prompt to a file (avoids shell-quoting pai
 DIR=<your scratchpad>/second-opinion
 mkdir -p "$DIR"
 # write $DIR/prompt.md, then, as a background Bash call:
-codex exec -C <repo root> -s read-only -o "$DIR/answer.md" - < "$DIR/prompt.md" > "$DIR/codex.log" 2>&1
+codex exec -C <repo root> -s read-only -c model_reasoning_effort="high" -o "$DIR/answer.md" - < "$DIR/prompt.md" > "$DIR/codex.log" 2>&1
 ```
 
 - `$DIR` is the session scratchpad, never the repository or worktree under review. Prompt, answer, and log are tooling artifacts, not project files, and a 50-300 KB log dropped into the worktree pollutes the very diff you're asking codex to read. Sub-agent definitions that forbid writing outside the workspace -- the builder's scope boundary, say -- aren't aimed at your own scratch files.
@@ -46,7 +46,11 @@ In both modes, do not lead the witness. "We think X is right -- do you agree?" p
 
 ## Model and effort
 
-Pass no model or effort flags by default: codex then uses the user's `~/.codex/config.toml` (their configured preference) or its built-in default, which tracks OpenAI's current best -- as of September 2026, `gpt-6-astra` at `high` effort, the right weight for "hard problem, strongest independent take". The header in `codex.log` confirms what actually ran.
+Pass no model flag by default -- codex picks the current flagship (`gpt-6-astra` as of October 2026) -- but **always pass the effort explicitly**: `-c model_reasoning_effort="high"`, the right weight for "hard problem, strongest independent take". Do not rely on a default: codex-cli 0.153.4 with no effort set sends `reasoning_effort: null` and the model reasons with zero tokens (seen 2026-10-25: header said `reasoning effort: none`). `~/.codex/config.toml` also sets `high` as a backstop, but the flag is what makes the run deterministic.
+
+Check the `codex.log` header after every run: `reasoning effort:` must show the level you asked for. If it says `none`, the opinion is a no-reasoning answer -- re-run before relaying it.
+
+The header is not proof on its own. Confirm in the session file (`grep -rl <session id> ~/.codex/sessions`) that `"reasoning_effort"` is the level you asked for and `"reasoning_output_tokens"` is above zero. Seen 2026-10-26 with codex-cli 0.153.4: `xhigh` printed `reasoning effort: xhigh` in the header but sent `reasoning_effort: null` and reasoned with 0 tokens. Use `high` until a newer CLI is confirmed to pass `xhigh` through.
 
 To dial down for a quick, cheap opinion:
 
