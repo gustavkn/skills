@@ -19,7 +19,7 @@ import sys
 MARKER = re.compile(r"<!--\s*code-review\s+verdict=(\S+)\s+sha=([0-9a-f]{7,40})\s*-->")
 PUNCT = ";&|\n"
 # `gh [-R x] pr [-R x] create|ready|merge`: the action must be the subcommand.
-GATED = re.compile(r"\bgh\s+(?:-\S+\s+\S+\s+)*pr\s+(?:-\S+\s+\S+\s+)*(create|ready|merge)\b")
+GATED = re.compile(r"\bgh\s+(?:-\S+\s+(?:[^-\s]\S*\s+)?)*pr\s+(?:-\S+\s+(?:[^-\s]\S*\s+)?)*(create|ready|merge)\b")
 # Flags of `gh pr ready/merge` that take a value, so their value isn't mistaken for the PR.
 VALUE_FLAGS = {"-R", "--repo", "-b", "--body", "-F", "--body-file", "-t", "--subject",
                "--match-head-commit", "-A", "--author-email"}

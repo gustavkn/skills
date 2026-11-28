@@ -22,6 +22,8 @@ CASES = [
     ("gh -R gustavkn/skills pr ready 5", "deny"),
     ("gh pr ready 5 --undo", "allow"),
     ("gh pr view 5 && echo ok", "allow"),
+    ("gh --repo=o/r pr create --title $'Don\\'t merge yet'", "deny"),
+    ("gh pr --repo=o/r merge 5 $'it\\'s'", "deny"),
     ("ls", "allow"),
 ]
 bad = 0
