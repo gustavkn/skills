@@ -11,13 +11,15 @@ The `code-review` skill posts that comment. Anything else, including a
 failed lookup, is denied with a reason the agent can act on.
 """
 import json
+import os
 import re
 import shlex
 import subprocess
 import sys
 
 MARKER = re.compile(r"<!--\s*code-review\s+verdict=(\S+)\s+sha=([0-9a-f]{7,40})\s*-->")
-PUNCT = ";&|\n"
+# Command separators; parentheses so `X=$(gh pr create ...)` and `(cd r && gh ...)` split out the gh call.
+PUNCT = ";&|\n()"
 # `gh [-R x] pr [-R x] create|ready|merge`: the action must be the subcommand.
 GATED = re.compile(r"\bgh\s+(?:-\S+\s+(?:[^-\s]\S*\s+)?)*pr\s+(?:-\S+\s+(?:[^-\s]\S*\s+)?)*(create|ready|merge)\b")
 # Flags of `gh pr ready/merge` that take a value, so their value isn't mistaken for the PR.
@@ -100,8 +102,11 @@ def check_review(action, args, cwd):
         deny(f"PR gate: couldn't look up the PR ({e}). `gh pr {action}` is blocked until it can.")
     if out.returncode != 0:
         deny(f"PR gate: `{' '.join(cmd)}` failed: {out.stderr.strip()[:300]}. `gh pr {action}` is blocked.")
-    pr = json.loads(out.stdout)
-    head = pr["headRefOid"]
+    try:
+        pr = json.loads(out.stdout)
+        head = pr["headRefOid"]
+    except (ValueError, KeyError, TypeError):
+        deny(f"PR gate: unexpected answer from `{' '.join(cmd)}`. `gh pr {action}` is blocked.")
     verdict = sha = None
     for c in pr.get("comments", []):
         m = MARKER.search(c.get("body", ""))
@@ -133,7 +138,8 @@ def main():
         return
     for seg in segs:
         if seg[0] == "cd" and len(seg) > 1:
-            cwd = seg[1] if seg[1].startswith("/") or cwd is None else f"{cwd}/{seg[1]}"
+            target = os.path.expanduser(seg[1])
+            cwd = target if os.path.isabs(target) or cwd is None else os.path.join(cwd, target)
             continue
         if seg[0] != "gh" or "pr" not in seg:
             continue

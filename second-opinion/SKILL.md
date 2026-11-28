@@ -95,7 +95,7 @@ cd <repo root> && codex exec review --base <base branch> -c model_reasoning_effo
 ```
 
 - Pass the effort explicitly here too, and check the log header, for the reasons under "Model and effort".
-- If the read-only sandbox can't start (e.g. `bwrap: loopback: Failed RTM_NEWADDR`), codex can't run `git` and the review is empty. Fall back to a disposable clone: `git clone --no-hardlinks` the repo into `$DIR`, create a local branch for the base first (`git branch -f <base> origin/<base>`; removing the remote deletes `origin/*`), then `git remote remove origin`, check out the branch there, and run codex in the clone with `-s danger-full-access`. It can't push or touch the real `.git` that way.
+- If the read-only sandbox can't start (e.g. `bwrap: loopback: Failed RTM_NEWADDR`), codex can't run `git` and the review is empty. Fall back to a disposable clone: `git clone --no-hardlinks` the repo into `$DIR`, create a local branch for the base first (`git branch -f <base> origin/<base>`; removing the remote deletes `origin/*`), then `git remote remove origin`, check out the branch there, and run codex in the clone with `-s danger-full-access`. It can't push or touch the real `.git` that way. A clone only has commits: when the review covers uncommitted work, carry it over (`git -C <repo> diff HEAD --binary | git -C <clone> apply`, then copy the files `git -C <repo> ls-files --others --exclude-standard` lists) and check `git -C <clone> status` shows the same changes before running codex.
 - Review findings are opinions too: verify before acting on them.
 
 For the built-in mode only:
