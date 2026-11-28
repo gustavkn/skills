@@ -98,4 +98,25 @@ Follow-ups:
 Dropped: <n> (<kinds>)
 ```
 
-`MERGE` means no Fix findings remain. If asked to apply the fixes too, apply the Fix bucket, re-run the tests, and re-review at the same tier only if the fixes themselves were non-trivial.
+`MERGE` means no Fix findings remain.
+
+## 6. Every PR: draft until the review says MERGE
+
+Every PR gets this review, and stays a draft until it passes:
+
+1. Open the PR as a draft: `gh pr create --draft ...`.
+2. Review it at its tier. Apply the Fix bucket, push, and review again. Re-review at the same tier when the fixes were non-trivial; for small, obvious fixes a light Claude check of just the fix commits is enough.
+3. Repeat until the verdict is `MERGE`. Stop after three rounds that still have Fix findings and report what's left instead of looping.
+4. Post the report as a PR comment, ending with the verdict marker for the commit you reviewed. Post it right after the review, before pushing anything else:
+
+   ```sh
+   SHA=$(gh pr view <n> --json headRefOid -q .headRefOid)
+   # $DIR/report.md holds the report from step 5 (scratchpad, not the repo)
+   printf '\n<!-- code-review verdict=MERGE sha=%s -->\n' "$SHA" >> "$DIR/report.md"
+   gh pr comment <n> --body-file "$DIR/report.md"
+   ```
+
+   Post the marker for non-MERGE verdicts too (`verdict=MERGE_AFTER_FIXES`, `verdict=NEEDS_REWORK`), so the PR shows where it stands.
+5. Only then `gh pr ready <n>`, and only if the repo lets you mark PRs ready (some repos leave that to the owner; then the MERGE comment is the hand-off).
+
+A hook (`scripts/pr_gate.py`, see the README) enforces this: it denies `gh pr create` without `--draft`, and `gh pr ready` / `gh pr merge` unless the latest marker says `MERGE` for the PR's current head. A push after the review moves the head, so it needs a new review and marker. Don't work around a denial; do what it says.

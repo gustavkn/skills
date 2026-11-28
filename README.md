@@ -34,3 +34,20 @@ Use the provided Makefile to symlink every skill into both the Claude Code and C
 - `make deploy` – deploys to both agents (`~/.claude/skills` and `~/.codex/skills`) and refreshes the corresponding instruction files
 - `make deploy-claude` – only refresh Claude Code's skills plus `~/.claude/CLAUDE.md`
 - `make deploy-codex` – only refresh Codex's skills plus `~/.codex/AGENTS.md`
+
+## PR review gate (hook)
+
+`code-review/scripts/pr_gate.py` is a Claude Code `PreToolUse` hook that keeps every PR a draft until the `code-review` skill has posted a `MERGE` verdict for its current head commit. It denies `gh pr create` without `--draft`, and `gh pr ready` / `gh pr merge` without that verdict. Add it to `~/.claude/settings.json`:
+
+```json
+"hooks": {
+  "PreToolUse": [
+    {
+      "matcher": "Bash",
+      "hooks": [{ "type": "command", "command": "python3 ~/skills/code-review/scripts/pr_gate.py", "timeout": 40 }]
+    }
+  ]
+}
+```
+
+It only sees Claude's own `gh` calls; the GitHub UI and other tools aren't gated.
