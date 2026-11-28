@@ -89,7 +89,7 @@ cd <repo root> && codex exec review --base <base branch> -c model_reasoning_effo
 ```
 
 - Pass the effort explicitly here too, and check the log header, for the reasons under "Model and effort".
-- If the read-only sandbox can't start (e.g. `bwrap: loopback: Failed RTM_NEWADDR`), codex can't run `git` and the review is empty. Fall back to a disposable clone: `git clone --no-hardlinks` the repo into `$DIR`, `git remote remove origin`, check out the branch there, and run codex in the clone with `-s danger-full-access`. It can't push or touch the real `.git` that way.
+- If the read-only sandbox can't start (e.g. `bwrap: loopback: Failed RTM_NEWADDR`), codex can't run `git` and the review is empty. Fall back to a disposable clone: `git clone --no-hardlinks` the repo into `$DIR`, create a local branch for the base first (`git branch -f <base> origin/<base>`; removing the remote deletes `origin/*`), then `git remote remove origin`, check out the branch there, and run codex in the clone with `-s danger-full-access`. It can't push or touch the real `.git` that way.
 - For a hand-rolled review prompt, hold it to the same bar: realistic failures with a concrete scenario each, no style remarks, no speculative hardening, pre-existing problems listed separately as follow-ups, and zero findings is fine.
 
 - Scope is exactly one of: `--uncommitted` (staged + unstaged + untracked), `--base <branch>`, `--commit <sha>`, or a custom prompt. A custom prompt cannot be combined with a git scope -- for a focused review ("check only the error paths"), capture the diff to a file yourself and use plain `codex exec`.

@@ -107,10 +107,12 @@ Every PR gets this review, and stays a draft until it passes:
 1. Open the PR as a draft: `gh pr create --draft ...`.
 2. Review it at its tier. Apply the Fix bucket, push, and review again. Re-review at the same tier when the fixes were non-trivial; for small, obvious fixes a light Claude check of just the fix commits is enough.
 3. Repeat until the verdict is `MERGE`. Stop after three rounds that still have Fix findings and report what's left instead of looping.
-4. Post the report as a PR comment, ending with the verdict marker for the commit you reviewed. Post it right after the review, before pushing anything else:
+4. Post the report as a PR comment, ending with the verdict marker for the commit you reviewed:
+
+   `SHA` is the head you captured with `gh pr view <n> --json headRefOid -q .headRefOid` *before* the review started, and the review must cover exactly that commit. Before posting, check the head is still `SHA`; if someone pushed meanwhile, review the new commits first.
 
    ```sh
-   SHA=$(gh pr view <n> --json headRefOid -q .headRefOid)
+   [ "$(gh pr view <n> --json headRefOid -q .headRefOid)" = "$SHA" ] || echo "head moved: re-review"
    # $DIR/report.md holds the report from step 5 (scratchpad, not the repo)
    printf '\n<!-- code-review verdict=MERGE sha=%s -->\n' "$SHA" >> "$DIR/report.md"
    gh pr comment <n> --body-file "$DIR/report.md"

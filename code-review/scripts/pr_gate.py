@@ -17,7 +17,7 @@ import subprocess
 import sys
 
 MARKER = re.compile(r"<!--\s*code-review\s+verdict=(\S+)\s+sha=([0-9a-f]{7,40})\s*-->")
-SEPARATORS = {"&&", "||", ";", "|", "&"}
+PUNCT = ";&|\n"
 # Flags of `gh pr ready/merge` that take a value, so their value isn't mistaken for the PR.
 VALUE_FLAGS = {"-R", "--repo", "-b", "--body", "-F", "--body-file", "-t", "--subject",
                "--match-head-commit", "-A", "--author-email"}
@@ -33,11 +33,14 @@ def deny(reason):
 
 
 def segments(command):
-    lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|")
+    # Newlines separate commands too; quoted newlines stay inside their argument.
+    command = command.replace("\\\n", " ")  # backslash-newline is a line continuation
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=PUNCT)
+    lexer.whitespace = " \t\r"
     lexer.whitespace_split = True
     current = []
     for token in lexer:
-        if token in SEPARATORS:
+        if token and all(ch in PUNCT for ch in token):
             if current:
                 yield current
             current = []
@@ -107,9 +110,19 @@ def main():
         if seg[0] == "cd" and len(seg) > 1:
             cwd = seg[1] if seg[1].startswith("/") or cwd is None else f"{cwd}/{seg[1]}"
             continue
-        if len(seg) < 3 or seg[0] != "gh" or seg[1] != "pr":
+        if seg[0] != "gh" or "pr" not in seg:
             continue
-        action, args = seg[2], seg[3:]
+        # Allow flags around the subcommands, e.g. `gh pr -R o/r merge 42`.
+        # Flags before `pr` (like `-R o/r`) are kept with the action's args.
+        p = seg.index("pr")
+        rest = seg[p + 1:]
+        lead = seg[1:p]
+        while rest and rest[0].startswith("-"):
+            n = 2 if rest[0] in VALUE_FLAGS and len(rest) > 1 else 1
+            lead, rest = lead + rest[:n], rest[n:]
+        if not rest:
+            continue
+        action, args = rest[0], lead + rest[1:]
         if action == "create" and not ({"--draft", "-d"} & set(args)):
             deny("PR gate: open PRs as drafts (`gh pr create --draft`). Mark it ready only after "
                  "the `code-review` skill's verdict is MERGE.")
