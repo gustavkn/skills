@@ -18,6 +18,7 @@ import sys
 
 MARKER = re.compile(r"<!--\s*code-review\s+verdict=(\S+)\s+sha=([0-9a-f]{7,40})\s*-->")
 PUNCT = ";&|\n"
+GATED = re.compile(r"\bgh\b.*\bpr\b.*\b(create|ready|merge)\b")
 # Flags of `gh pr ready/merge` that take a value, so their value isn't mistaken for the PR.
 VALUE_FLAGS = {"-R", "--repo", "-b", "--body", "-F", "--body-file", "-t", "--subject",
                "--match-head-commit", "-A", "--author-email"}
@@ -125,7 +126,10 @@ def main():
     try:
         segs = list(segments(command))
     except ValueError:
-        return  # unparseable shell; not ours to judge
+        if GATED.search(command):
+            deny("PR gate: couldn't parse this command (unbalanced quotes?). Run the `gh pr` "
+                 "command on its own in a separate Bash call.")
+        return
     for seg in segs:
         if seg[0] == "cd" and len(seg) > 1:
             cwd = seg[1] if seg[1].startswith("/") or cwd is None else f"{cwd}/{seg[1]}"
