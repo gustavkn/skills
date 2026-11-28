@@ -32,7 +32,24 @@ def deny(reason):
     sys.exit(0)
 
 
+HEREDOC = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1")
+
+
+def strip_heredocs(command):
+    """Drop heredoc bodies: they're data for a command, not commands."""
+    out, pending = [], []
+    for line in command.split("\n"):
+        if pending:
+            if line.strip() == pending[0]:
+                pending.pop(0)
+            continue
+        out.append(line)
+        pending = [m.group(2) for m in HEREDOC.finditer(line)]
+    return "\n".join(out)
+
+
 def segments(command):
+    command = strip_heredocs(command)
     # Newlines separate commands too; quoted newlines stay inside their argument.
     command = command.replace("\\\n", " ")  # backslash-newline is a line continuation
     lexer = shlex.shlex(command, posix=True, punctuation_chars=PUNCT)
