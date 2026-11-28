@@ -105,20 +105,21 @@ Dropped: <n> (<kinds>)
 Every PR gets this review, and stays a draft until it passes:
 
 1. Open the PR as a draft: `gh pr create --draft ...`.
-2. Review it at its tier. Apply the Fix bucket, push, and review again. Re-review at the same tier when the fixes were non-trivial; for small, obvious fixes a light Claude check of just the fix commits is enough.
-3. Repeat until the verdict is `MERGE`. Stop after three rounds that still have Fix findings and report what's left instead of looping.
-4. Post the report as a PR comment, ending with the verdict marker for the commit you reviewed:
+2. Review it at its tier. Apply the Fix bucket, push, and review the fix commits as a new round: at the same tier when the fixes were non-trivial, or by a fresh Claude subagent when they're small and obvious. Never by yourself; you wrote the fix.
+3. Repeat until the verdict is `MERGE`. You may post `MERGE` only when the latest review round covered the current head and left no Fix findings after triage (list what you dropped). A fix you pushed after that round needs its own round, even a small one.
+4. **Round limit.** After three rounds that still produced Fix findings, stop. Post the report with `verdict=OWNER_DECISION`, leave the PR as a draft, and ask the owner. Only the owner then decides: they mark it ready themselves, or tell you to post `MERGE`. Don't post `MERGE` on your own triage past the limit; a reviewer that keeps finding things is information, even when each finding is small.
+5. Post the report as a PR comment, ending with the verdict marker for the commit you reviewed:
 
    `SHA` is the head you captured with `gh pr view <n> --json headRefOid -q .headRefOid` *before* the review started, and the review must cover exactly that commit. Before posting, check the head is still `SHA`; if someone pushed meanwhile, review the new commits first.
 
    ```sh
    [ "$(gh pr view <n> --json headRefOid -q .headRefOid)" = "$SHA" ] || echo "head moved: re-review"
-   # $DIR/report.md holds the report from step 5 (scratchpad, not the repo)
+   # $DIR/report.md holds the report from section 5 (scratchpad, not the repo)
    printf '\n<!-- code-review verdict=MERGE sha=%s -->\n' "$SHA" >> "$DIR/report.md"
    gh pr comment <n> --body-file "$DIR/report.md"
    ```
 
-   Post the marker for non-MERGE verdicts too (`verdict=MERGE_AFTER_FIXES`, `verdict=NEEDS_REWORK`), so the PR shows where it stands.
-5. Only then `gh pr ready <n>`, and only if the repo lets you mark PRs ready (some repos leave that to the owner; then the MERGE comment is the hand-off).
+   Post the marker for non-MERGE verdicts too (`verdict=MERGE_AFTER_FIXES`, `verdict=NEEDS_REWORK`, `verdict=OWNER_DECISION`), so the PR shows where it stands.
+6. Only after a `MERGE` verdict, `gh pr ready <n>`, and only if the repo lets you mark PRs ready (some repos leave that to the owner; then the MERGE comment is the hand-off).
 
 A hook (`scripts/pr_gate.py`, see the README) enforces this: it denies `gh pr create` without `--draft`, and `gh pr ready` / `gh pr merge` unless the latest marker says `MERGE` for the PR's current head. A push after the review moves the head, so it needs a new review and marker. Don't work around a denial; do what it says.
