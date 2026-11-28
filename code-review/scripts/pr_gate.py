@@ -45,7 +45,9 @@ def strip_heredocs(command):
                 pending.pop(0)
             continue
         out.append(line)
-        pending = [m.group(2) for m in HEREDOC.finditer(line)]
+        pending = [m.group(2).replace("\\", "") for m in HEREDOC.finditer(line)]
+    if pending:
+        return command  # a heredoc never closed: misparsed, so check every line
     return "\n".join(out)
 
 
