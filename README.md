@@ -12,7 +12,7 @@ Made with ✨sparkles✨ by [maragu](https://www.maragu.dev/): independent softw
 
 - **bluesky** - Guide for posting content to the Bluesky social network using the bsky terminal app
 - **brainstorm** - Guide for brainstorming ideas and turning them into fully formed designs through iterative questioning
-- **code-review** - Guide for making code reviews using competing agents to find architecture and implementation issues
+- **code-review** - Guide for making code reviews sized to risk: light Claude review, codex review, or a deep combined review for critical changes
 - **collaboration** - Guide for collaborating on code in open source projects (forking, PRs, reviews, issues)
 - **datastar** - Guide for building interactive web UIs with Datastar and gomponents-datastar
 - **decisions** - Guide for recording significant architectural and design decisions in `docs/decisions.md`
