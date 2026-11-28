@@ -44,7 +44,14 @@ One subagent, or do it yourself if the diff is a few lines. Check that the chang
 
 ### Standard: codex review
 
-Run `codex exec review` against the base branch at `-c model_reasoning_effort="high"`, as described in the `second-opinion` skill under "Code review second opinions". Its built-in reviewer already holds a strict "definite bugs only" bar. If you use a custom prompt instead, include the reviewer brief.
+Run codex with a written review prompt (plain `codex exec`, at `-c model_reasoning_effort="high"`; mechanics in the `second-opinion` skill under "Code review second opinions"). The prompt holds:
+
+- **Scope:** the base branch or commit range, e.g. "review `git diff dev...HEAD`". Codex runs `git` and reads the files itself.
+- **Context:** one or two lines on what the code is for, who uses it, and what a realistic failure looks like, e.g. "a hook that gates Claude's own `gh` calls; it doesn't defend against an attacker" or "computes figures that go into a filed annual report". Add the repo's stage if it matters ("beta: don't harden against things that don't happen").
+- **The reviewer brief** below, verbatim.
+- **Output shape:** the findings, each with scenario and fix, or "no findings".
+
+Don't use the built-in `codex exec review` mode here: it can't take this prompt, so it reviews without the brief or the context and reports every corner case it can construct. Use it only if a written-prompt run fails.
 
 If codex is unavailable (not logged in, usage limit hit, sandbox broken and the fallback in `second-opinion` doesn't work), fall back to two Claude subagents, one on architecture and one on implementation, and say so in the report.
 
@@ -52,7 +59,7 @@ If codex is unavailable (not logged in, usage limit hit, sandbox broken and the 
 
 Run these in parallel:
 
-1. **codex review**, as for Standard.
+1. **codex review** with the written prompt, as for Standard.
 2. **An adversarial codex prompt** (plain `codex exec`, see `second-opinion`) aimed at whatever made the change Critical. For example: "This change alters how X is stored. Find how it fails: data loss or corruption, existing data the migration doesn't handle, a user seeing another user's data, a wrong number reaching a report." Ask for a concrete failing scenario per finding.
 3. **An independent Claude subagent** reviewing architecture and implementation together, briefed on the same risk area but not shown codex's output.
 
@@ -60,8 +67,9 @@ Then cross-check. A finding two reviewers reached independently is strong; a fin
 
 ## Reviewer brief
 
-Give every reviewer this bar, adapted to the change:
+Give every reviewer this bar, adapted to the change, together with the context (what the code is for and what a realistic failure looks like):
 
+- Judge each problem by **how likely it is** given that context, not by how bad it would be in theory. A bypass that needs input nobody produces isn't a finding.
 - Report problems that will **realistically happen** in normal use or a plausible failure: a wrong result, a crash, lost or corrupted data, a security hole, a broken caller, a missing test for changed behavior.
 - For each finding: what goes wrong, the concrete scenario (input or state, then the wrong outcome), and the fix.
 - **Don't report** style, naming, formatting, hypothetical scaling problems, races that need several unlikely events to line up, defense-in-depth against states the system can't produce, or "consider adding" suggestions with no concrete failure behind them.
@@ -76,7 +84,7 @@ Reviewers over-report even with a strict bar. Before relaying, put each finding 
 
 - **Fix**: realistic, in scope, and the fix is clear. This includes anything in a Critical area that can cause data loss, a data leak, or a wrong figure, however unlikely; those are never downgraded for being rare.
 - **Follow-up**: valuable but out of scope, pre-existing, or bigger than this change should carry. Open an issue, or list it under `## Follow-ups` in the PR if that's the repo's convention: one line on the problem, one on why it matters.
-- **Drop**: nitpicks, speculation and gold-plating. Mention only the count ("dropped 4: style, speculative") so it's clear they were seen.
+- **Drop**: nitpicks, speculation and gold-plating, and findings that only happen with inputs nobody produces. Judge by likelihood, not by the reviewer's severity label: a "P1" that needs an exotic input is still a Drop (or a Follow-up if it's cheap and you want it on record). Mention only the count ("dropped 4: style, speculative") so it's clear they were seen.
 
 Verify every Fix finding before acting on it: read the code, run the scenario, or write the failing test. A finding you can't reproduce or trace through the code goes to Follow-up with a note, not into the fix list.
 

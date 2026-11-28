@@ -82,7 +82,13 @@ This keeps the model's context, so use it when the user reacts to the opinion ("
 
 The `code-review` skill decides *when* codex reviews (by risk tier) and how its findings are triaged; this section is the mechanics.
 
-For "second opinion on this diff/branch/commit", prefer `codex exec review` over a hand-rolled prompt. It is a dedicated review mode with a strict reviewer prompt -- only definite bugs introduced by the change, pre-existing problems excluded, "prefer no findings" over speculation -- and it is read-only by construction.
+For a code review, write the prompt yourself and run plain `codex exec`, as in "Core command". The `code-review` skill says what the prompt must hold: the scope (a base branch or commit range for codex to `git diff` itself), a line of context on what the code is for and what a realistic failure looks like, and the reviewer brief. Without that context and bar, codex reports every corner case it can construct.
+
+```sh
+codex exec -C <repo root> -s read-only -c model_reasoning_effort="high" -o "$DIR/review.md" - < "$DIR/review-prompt.md" > "$DIR/review.log" 2>&1
+```
+
+The built-in review mode, `codex exec review`, is the fallback when a written-prompt run fails. It has its own strict reviewer prompt, but it can't take yours, so it reviews without the brief or the context:
 
 ```sh
 cd <repo root> && codex exec review --base <base branch> -c model_reasoning_effort="high" -o "$DIR/review.md" </dev/null > "$DIR/review.log" 2>&1
@@ -90,12 +96,13 @@ cd <repo root> && codex exec review --base <base branch> -c model_reasoning_effo
 
 - Pass the effort explicitly here too, and check the log header, for the reasons under "Model and effort".
 - If the read-only sandbox can't start (e.g. `bwrap: loopback: Failed RTM_NEWADDR`), codex can't run `git` and the review is empty. Fall back to a disposable clone: `git clone --no-hardlinks` the repo into `$DIR`, create a local branch for the base first (`git branch -f <base> origin/<base>`; removing the remote deletes `origin/*`), then `git remote remove origin`, check out the branch there, and run codex in the clone with `-s danger-full-access`. It can't push or touch the real `.git` that way.
-- For a hand-rolled review prompt, hold it to the same bar: realistic failures with a concrete scenario each, no style remarks, no speculative hardening, pre-existing problems listed separately as follow-ups, and zero findings is fine.
-
-- Scope is exactly one of: `--uncommitted` (staged + unstaged + untracked), `--base <branch>`, `--commit <sha>`, or a custom prompt. A custom prompt cannot be combined with a git scope -- for a focused review ("check only the error paths"), capture the diff to a file yourself and use plain `codex exec`.
-- It reviews the process working directory (no `-C`), so `cd` as part of the same command.
-- A completed review exits 0 whether or not it found problems; empty output means failure, not a clean review. The verdict is in the output. Add `--json` if you want the structured findings events instead of prose.
 - Review findings are opinions too: verify before acting on them.
+
+For the built-in mode only:
+
+- Scope is exactly one of: `--uncommitted` (staged + unstaged + untracked), `--base <branch>`, `--commit <sha>`, or a custom prompt. A custom prompt cannot be combined with a git scope, which is why the written-prompt run above is the default.
+- It reviews the process working directory (no `-C`), so `cd` as part of the same command.
+- A completed review exits 0 whether or not it found problems; empty output means failure, not a clean review. Add `--json` if you want the structured findings events instead of prose.
 
 ## Direct or subagent?
 
