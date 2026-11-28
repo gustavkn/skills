@@ -12,7 +12,7 @@ Made with ✨sparkles✨ by [maragu](https://www.maragu.dev/): independent softw
 
 - **bluesky** - Guide for posting content to the Bluesky social network using the bsky terminal app
 - **brainstorm** - Guide for brainstorming ideas and turning them into fully formed designs through iterative questioning
-- **code-review** - Guide for making code reviews using competing agents to find architecture and implementation issues
+- **code-review** - Guide for making code reviews sized to risk: light Claude review, codex review, or a deep combined review for critical changes
 - **collaboration** - Guide for collaborating on code in open source projects (forking, PRs, reviews, issues)
 - **datastar** - Guide for building interactive web UIs with Datastar and gomponents-datastar
 - **decisions** - Guide for recording significant architectural and design decisions in `docs/decisions.md`
@@ -34,3 +34,20 @@ Use the provided Makefile to symlink every skill into both the Claude Code and C
 - `make deploy` – deploys to both agents (`~/.claude/skills` and `~/.codex/skills`) and refreshes the corresponding instruction files
 - `make deploy-claude` – only refresh Claude Code's skills plus `~/.claude/CLAUDE.md`
 - `make deploy-codex` – only refresh Codex's skills plus `~/.codex/AGENTS.md`
+
+## PR review gate (hook)
+
+`code-review/scripts/pr_gate.py` is a Claude Code `PreToolUse` hook that keeps every PR a draft until the `code-review` skill has posted a `MERGE` verdict for its current head commit. It denies `gh pr create` without `--draft`, and `gh pr ready` / `gh pr merge` without that verdict. Add it to `~/.claude/settings.json`:
+
+```json
+"hooks": {
+  "PreToolUse": [
+    {
+      "matcher": "Bash",
+      "hooks": [{ "type": "command", "command": "python3 ~/skills/code-review/scripts/pr_gate.py", "timeout": 40 }]
+    }
+  ]
+}
+```
+
+It only sees Claude's own `gh` calls; the GitHub UI and other tools aren't gated.

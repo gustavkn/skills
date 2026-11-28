@@ -1,6 +1,6 @@
 ---
 name: second-opinion
-description: Get a second opinion from another AI model (currently OpenAI models, via the codex CLI) on a design decision, a stubborn bug, a code review, or any question where an independent take is valuable. Use only when the user explicitly asks for one -- "get a second opinion", "ask OpenAI", "ask codex", "what does GPT think", "/second-opinion", or similar. Do not use proactively.
+description: Get a second opinion from another AI model (currently OpenAI models, via the codex CLI) on a design decision, a stubborn bug, a code review, or any question where an independent take is valuable. Use only when the user explicitly asks for one -- "get a second opinion", "ask OpenAI", "ask codex", "what does GPT think", "/second-opinion", or similar -- or when the `code-review` skill calls for a codex review (Standard and Critical tiers). Do not use proactively otherwise.
 license: MIT
 ---
 
@@ -80,11 +80,17 @@ This keeps the model's context, so use it when the user reacts to the opinion ("
 
 ## Code review second opinions
 
+The `code-review` skill decides *when* codex reviews (by risk tier) and how its findings are triaged; this section is the mechanics.
+
 For "second opinion on this diff/branch/commit", prefer `codex exec review` over a hand-rolled prompt. It is a dedicated review mode with a strict reviewer prompt -- only definite bugs introduced by the change, pre-existing problems excluded, "prefer no findings" over speculation -- and it is read-only by construction.
 
 ```sh
-codex exec review --base main -o "$DIR/review.md" </dev/null > "$DIR/review.log" 2>&1
+cd <repo root> && codex exec review --base <base branch> -c model_reasoning_effort="high" -o "$DIR/review.md" </dev/null > "$DIR/review.log" 2>&1
 ```
+
+- Pass the effort explicitly here too, and check the log header, for the reasons under "Model and effort".
+- If the read-only sandbox can't start (e.g. `bwrap: loopback: Failed RTM_NEWADDR`), codex can't run `git` and the review is empty. Fall back to a disposable clone: `git clone --no-hardlinks` the repo into `$DIR`, create a local branch for the base first (`git branch -f <base> origin/<base>`; removing the remote deletes `origin/*`), then `git remote remove origin`, check out the branch there, and run codex in the clone with `-s danger-full-access`. It can't push or touch the real `.git` that way.
+- For a hand-rolled review prompt, hold it to the same bar: realistic failures with a concrete scenario each, no style remarks, no speculative hardening, pre-existing problems listed separately as follow-ups, and zero findings is fine.
 
 - Scope is exactly one of: `--uncommitted` (staged + unstaged + untracked), `--base <branch>`, `--commit <sha>`, or a custom prompt. A custom prompt cannot be combined with a git scope -- for a focused review ("check only the error paths"), capture the diff to a file yourself and use plain `codex exec`.
 - It reviews the process working directory (no `-C`), so `cd` as part of the same command.
