@@ -32,7 +32,8 @@ def deny(reason):
     sys.exit(0)
 
 
-HEREDOC = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1")
+# `<<EOF`, `<<-'END-TEXT'`; not the `<<<` here-string.
+HEREDOC = re.compile(r"(?<!<)<<-?(?!<)\s*(['\"]?)([^\s'\"<>;|&()]+)\1")
 
 
 def strip_heredocs(command):
